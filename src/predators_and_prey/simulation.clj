@@ -1,9 +1,12 @@
 (ns predators-and-prey.simulation
 	(:use predators-and-prey.constants)
-	(:use predators-and-prey.collisions))
+	(:use predators-and-prey.collisions)
+        (:use predators-and-prey.vectors)
+(:use [clojure.contrib.pprint :only [pprint]])
+        )
 
-(def predator {:max-velocity 7 :radius 10})
-(def prey {:max-velocity 4 :radius 5})
+(def predator {:max-velocity 7 :radius 20})
+(def prey {:max-velocity 4 :radius 10})
 
 (def animals (atom {}))
 
@@ -33,10 +36,54 @@
 	(fn [prey]
 		(if (nil? (some #(collides? prey %) predators)) true false)))
 
+
+(defn flee-from [point animal]
+  (let [difference (sub point [(:x animal) (:y animal)])
+        unit-vec (unit difference)
+        [vx vy] (mul (- (:max-velocity animal)) 
+                     unit-vec)
+        ]
+    (assoc animal :vx vx :vy vy ))
+  )
+
+(defn aim-at [point animal]
+  (let [difference (sub point [(:x animal) (:y animal)])
+        unit-vec (unit difference)
+        [vx vy] (mul (:max-velocity animal)
+                     unit-vec)
+        ]
+    (assoc animal :vx vx :vy vy ))
+  )
+
+
+(defn animal-to-vec [{:keys [x y]}]
+  [x y])
+
+(defn distance-between [animal1 animal2]
+  (len (sub (animal-to-vec animal1) (animal-to-vec animal2))))
+
+(defn decide-direction [animal state]
+  (let [distance-to-target #(distance-between animal %)
+        sorted #(sort-by distance-to-target %)
+        v (-> state :prey sorted first animal-to-vec)]
+    (aim-at v animal)))
+
+(defn decide-direction-prey [animal state]
+  (let [distance-to-target #(distance-between animal %)
+        sorted #(sort-by distance-to-target %)
+        v (-> state :predators sorted first animal-to-vec)]
+    (flee-from v animal)))
+
+
 (defn think [current-state]
-	(let [new-predators (map move (:predators current-state))
-		remaining-prey (filter (surviving? new-predators) (:prey current-state))]
-	( -> @animals
+  (let [new-predators (map #(decide-direction % current-state)  (:predators current-state))
+	remaining-prey (filter (surviving? new-predators) (:prey current-state))
+        remaining-prey (map #(decide-direction-prey % current-state)  remaining-prey)
+        remaining-prey (map move remaining-prey)
+        new-predators (map move new-predators)
+        ]
+   
+    ( -> current-state
 		(assoc :predators new-predators :prey remaining-prey))))
 
 (defn pulse []

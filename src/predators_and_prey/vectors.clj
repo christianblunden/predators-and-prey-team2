@@ -13,8 +13,8 @@
   (Math/sqrt (+ (* x x) (* y y))))
 
 (defn unit [[x y]]
-  [(/ x (vlen [x y]))
-   (/ y (vlen [x y]))])
+  [(/ x (len [x y]))
+   (/ y (len [x y]))])
 
 (defn mul [a [x y]]
   [(* a x) (* a y)])
