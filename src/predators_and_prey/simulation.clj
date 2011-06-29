@@ -40,7 +40,7 @@
 (def flee -)
 (def target +)
 
-(defn align [point animal strategy]
+(defn move-towards [point animal strategy]
   (let [difference (sub point [(:x animal) (:y animal)])
         unit-vec (unit difference)
         [vx vy] (mul (strategy (:max-velocity animal)) 
@@ -56,19 +56,17 @@
 (defn direction [strategy opponents animal state]
   (let [distance-to-target #(distance-between animal %)
         sorted #(sort-by distance-to-target %)
-        v (-> state opponents sorted first animal-to-vec)]
-    (align v animal strategy)))
+        desired-location (-> state opponents sorted first animal-to-vec)]
+    (move-towards desired-location animal strategy)))
 
 (defn think [current-state]
   (let [new-predators (map #(direction target :prey % current-state) (:predators current-state))
 	remaining-prey (filter (surviving? new-predators) (:prey current-state))
         remaining-prey (map #(direction flee :predators % current-state) remaining-prey)
         remaining-prey (map move remaining-prey)
-        new-predators (map move new-predators)
-        ]
-   
-    ( -> current-state
-		(assoc :predators new-predators :prey remaining-prey))))
+        new-predators (map move new-predators)]
+    (-> current-state
+        (assoc :predators new-predators :prey remaining-prey))))
 
 (defn pulse []
 	(let [bounded-screen-size (- screen-size 20)]
